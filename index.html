@@ -7,7 +7,14 @@
 		<style>
 			body { background-image: url("https://www.w3schools.com/cssref/w3css.gif"); /*height: 2000px */}
 			
-			
+/*phone sticky for mobile only*/
+.phoneSticky{
+    width:40px;
+    height:40px;
+    position:fixed;
+    margin-bottom:60px;
+    z-index:1;
+}			
 
 .social {
   width: 200px;
@@ -93,6 +100,12 @@ ul {
 		</style>
 	</head>
 <body>
+	 <!--Phone sticky for mobile only-->
+ <div class="phoneSticky w3-hide-medium w3-hide-large w3-right">
+  <a href="tel:15126803300"><i class="fa fa-phone-square"></i></a>
+ </div>
+	
+	
   <ul class="social">
     <li>
       <a class="fa fa-facebook" href="https://www.facebook.com/CulinKarateCenter/" target="_blank">   
