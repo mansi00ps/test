@@ -19,6 +19,18 @@
 	
 }
 			
+			.float-lower-left {
+  position: relative;
+  float: right;
+  right:1;
+  top: 10em;
+  /* push it up into the element before it. This is a trick for bottom-right */
+  right: 1;
+  z-index: 200;
+  opacity: 0.5;
+  font-weight:bolder;
+}
+			
 			.phoneSticky li a {
   display: block;
   height: 40px;
@@ -124,7 +136,7 @@ ul {
 	</head>
 <body>
 	 <!--Phone sticky for mobile only-->
-	<div><!-- class="w3-bottom"-->
+	<div class="float-lower-left"><!-- class="w3-bottom"-->
  <ul class="phoneSticky w3-right"><!--w3-hide-medium w3-hide-large-->
 	 <li>
   <a href="tel:15126803300"><i class="fa fa-phone"></i></a>
