@@ -4,7 +4,7 @@
 
 This repository includes a standalone discounted cash flow script:
 
-- `/home/runner/work/test/test/dcf_tool.py`
+- `dcf_tool.py`
 
 ### What it does
 
@@ -20,7 +20,7 @@ Given a ticker symbol, it:
 ### Usage
 
 ```bash
-python3 /home/runner/work/test/test/dcf_tool.py AAPL --pretty
+python3 dcf_tool.py AAPL --pretty
 ```
 
 Optional flags:

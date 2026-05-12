@@ -2,6 +2,7 @@
 import argparse
 import json
 import math
+import socket
 import statistics
 import sys
 import urllib.error
@@ -11,6 +12,9 @@ from typing import Dict, List, Optional, Tuple
 
 
 SEC_USER_AGENT = "DCF-Analysis-Tool/1.0 (opensource@example.com)"
+DEFAULT_GROWTH_RATE = 0.05
+DEFAULT_COST_OF_DEBT = 0.05
+DEFAULT_TAX_RATE = 0.21
 
 
 @dataclass
@@ -107,9 +111,11 @@ def pick_latest(series: List[Tuple[str, float]]) -> Optional[float]:
     return series[-1][1]
 
 
-def estimate_growth_rate(fcf_history: List[float], cap: float = 0.2, floor: float = -0.1) -> float:
+def estimate_growth_rate(
+    fcf_history: List[float], max_growth_rate: float = 0.2, min_growth_rate: float = -0.1
+) -> float:
     if len(fcf_history) < 2:
-        return 0.05
+        return DEFAULT_GROWTH_RATE
     growth_rates = []
     for i in range(1, len(fcf_history)):
         prev = fcf_history[i - 1]
@@ -118,9 +124,9 @@ def estimate_growth_rate(fcf_history: List[float], cap: float = 0.2, floor: floa
             continue
         growth_rates.append((curr - prev) / abs(prev))
     if not growth_rates:
-        return 0.05
+        return DEFAULT_GROWTH_RATE
     avg = statistics.mean(growth_rates)
-    return max(floor, min(cap, avg))
+    return max(min_growth_rate, min(max_growth_rate, avg))
 
 
 def project_fcfs(base_fcf: float, growth_rate: float, years: int = 5) -> List[float]:
@@ -178,7 +184,7 @@ def compute_wacc(
     if debt_value > 0 and interest_expense and interest_expense > 0:
         cost_of_debt = interest_expense / debt_value
     else:
-        cost_of_debt = 0.05
+        cost_of_debt = DEFAULT_COST_OF_DEBT
     wacc = (equity_weight * cost_of_equity) + (debt_weight * cost_of_debt * (1 - tax_rate))
     return wacc, cost_of_equity, cost_of_debt
 
@@ -210,7 +216,7 @@ def compute_tax_rate(facts: Dict) -> float:
     )
     pretax_income = pick_latest(get_usd_series(facts, ["IncomeBeforeTax"]))
     if income_tax is None or pretax_income is None or abs(pretax_income) < 1e-9:
-        return 0.21
+        return DEFAULT_TAX_RATE
     rate = income_tax / pretax_income
     return max(0.0, min(0.4, rate))
 
@@ -225,7 +231,7 @@ def build_fcf_history(facts: Dict, years: int = 3) -> List[Tuple[str, float]]:
     )
     capex_series = get_usd_series(
         facts,
-        ["PaymentsToAcquirePropertyPlantAndEquipment", "CapitalExpendituresIncurredButNotYetPaid"],
+        ["PaymentsToAcquirePropertyPlantAndEquipment"],
     )
     if not cfo_series or not capex_series:
         raise ValueError("Could not retrieve operating cash flow and capex from company facts.")
@@ -239,6 +245,7 @@ def build_fcf_history(facts: Dict, years: int = 3) -> List[Tuple[str, float]]:
     history = []
     for year in selected_years:
         cfo = cfo_map[year]
+        # Normalize CapEx to outflow magnitude because filings may report it as positive or negative.
         capex = abs(capex_map[year])
         fcf = cfo - capex
         history.append((year, fcf))
@@ -266,7 +273,13 @@ def run_analysis(
         price_data.get("sharesOutstanding")
     )
     market_cap = raw_value(price_data.get("marketCap"))
-    beta = raw_value(stats.get("beta")) or 1.0
+    beta = raw_value(stats.get("beta"))
+    if beta is None:
+        beta = 1.0
+        print(
+            "Warning: beta unavailable from Yahoo Finance; using fallback beta=1.0.",
+            file=sys.stderr,
+        )
     debt = raw_value(financial_data.get("totalDebt")) or 0.0
     cash = raw_value(financial_data.get("totalCash")) or 0.0
 
@@ -369,8 +382,8 @@ def main() -> int:
         else:
             print(json.dumps(result))
         return 0
-    except (ValueError, urllib.error.URLError, TimeoutError) as err:
-        print(f"Error: {err}", file=sys.stderr)
+    except (ValueError, urllib.error.URLError, socket.timeout, TimeoutError) as err:
+        print(f"Error while analyzing ticker '{args.ticker}': {err}", file=sys.stderr)
         return 1
 
 
