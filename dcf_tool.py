@@ -14,6 +14,10 @@ SEC_USER_AGENT = "DCF-Analysis-Tool/1.0 (dcf-tool-contact@users.noreply.github.c
 DEFAULT_GROWTH_RATE = 0.05
 DEFAULT_COST_OF_DEBT = 0.05
 DEFAULT_TAX_RATE = 0.21
+MAX_GROWTH_RATE = 0.2
+MIN_GROWTH_RATE = -0.1
+MIN_TAX_RATE = 0.0
+MAX_TAX_RATE = 0.4
 EPSILON = 1e-9
 
 
@@ -114,7 +118,9 @@ def pick_latest(series: List[Tuple[str, float]]) -> Optional[float]:
 
 
 def estimate_growth_rate(
-    fcf_history: List[float], max_growth_rate: float = 0.2, min_growth_rate: float = -0.1
+    fcf_history: List[float],
+    max_growth_rate: float = MAX_GROWTH_RATE,
+    min_growth_rate: float = MIN_GROWTH_RATE,
 ) -> float:
     if len(fcf_history) < 2:
         return DEFAULT_GROWTH_RATE
@@ -220,7 +226,7 @@ def compute_tax_rate(facts: Dict) -> float:
     if income_tax is None or pretax_income is None or abs(pretax_income) < EPSILON:
         return DEFAULT_TAX_RATE
     rate = income_tax / pretax_income
-    return max(0.0, min(0.4, rate))
+    return max(MIN_TAX_RATE, min(MAX_TAX_RATE, rate))
 
 
 def build_fcf_history(facts: Dict, years: int = 3) -> List[Tuple[str, float]]:
@@ -390,10 +396,7 @@ def main() -> int:
     except urllib.error.URLError as err:
         print(f"Network error while analyzing ticker '{args.ticker}': {err}", file=sys.stderr)
         return 1
-    except socket.timeout as err:
-        print(f"Timeout while analyzing ticker '{args.ticker}': {err}", file=sys.stderr)
-        return 1
-    except TimeoutError as err:
+    except (socket.timeout, TimeoutError) as err:
         print(f"Timeout while analyzing ticker '{args.ticker}': {err}", file=sys.stderr)
         return 1
 
