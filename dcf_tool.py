@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 import argparse
 import json
-import math
-import socket
 import statistics
 import sys
 import urllib.error
@@ -382,7 +380,7 @@ def main() -> int:
         else:
             print(json.dumps(result))
         return 0
-    except (ValueError, urllib.error.URLError, socket.timeout, TimeoutError) as err:
+    except (ValueError, urllib.error.URLError, TimeoutError) as err:
         print(f"Error while analyzing ticker '{args.ticker}': {err}", file=sys.stderr)
         return 1
 
