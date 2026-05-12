@@ -13,6 +13,7 @@ SEC_USER_AGENT = "DCF-Analysis-Tool/1.0 (opensource@example.com)"
 DEFAULT_GROWTH_RATE = 0.05
 DEFAULT_COST_OF_DEBT = 0.05
 DEFAULT_TAX_RATE = 0.21
+EPSILON = 1e-9
 
 
 @dataclass
@@ -91,7 +92,9 @@ def get_usd_series(facts: Dict, concept_names: List[str]) -> List[Tuple[str, flo
         annual = [
             item
             for item in usd_values
-            if item.get("form") == "10-K" and item.get("val") is not None and item.get("fy")
+            if item.get("form") == "10-K"
+            and item.get("val") is not None
+            and item.get("fy") is not None
         ]
         if not annual:
             continue
@@ -118,7 +121,7 @@ def estimate_growth_rate(
     for i in range(1, len(fcf_history)):
         prev = fcf_history[i - 1]
         curr = fcf_history[i]
-        if abs(prev) < 1e-9:
+        if abs(prev) < EPSILON:
             continue
         growth_rates.append((curr - prev) / abs(prev))
     if not growth_rates:
@@ -213,7 +216,7 @@ def compute_tax_rate(facts: Dict) -> float:
         get_usd_series(facts, ["IncomeTaxExpenseBenefit", "IncomeTaxExpense"])
     )
     pretax_income = pick_latest(get_usd_series(facts, ["IncomeBeforeTax"]))
-    if income_tax is None or pretax_income is None or abs(pretax_income) < 1e-9:
+    if income_tax is None or pretax_income is None or abs(pretax_income) < EPSILON:
         return DEFAULT_TAX_RATE
     rate = income_tax / pretax_income
     return max(0.0, min(0.4, rate))
@@ -380,8 +383,14 @@ def main() -> int:
         else:
             print(json.dumps(result))
         return 0
-    except (ValueError, urllib.error.URLError, TimeoutError) as err:
-        print(f"Error while analyzing ticker '{args.ticker}': {err}", file=sys.stderr)
+    except ValueError as err:
+        print(f"Input/data error while analyzing ticker '{args.ticker}': {err}", file=sys.stderr)
+        return 1
+    except urllib.error.URLError as err:
+        print(f"Network error while analyzing ticker '{args.ticker}': {err}", file=sys.stderr)
+        return 1
+    except TimeoutError as err:
+        print(f"Timeout while analyzing ticker '{args.ticker}': {err}", file=sys.stderr)
         return 1
 
 
