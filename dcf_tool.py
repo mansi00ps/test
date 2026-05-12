@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import socket
 import statistics
 import sys
 import urllib.error
@@ -9,7 +10,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 
-SEC_USER_AGENT = "DCF-Analysis-Tool/1.0 (opensource@example.com)"
+SEC_USER_AGENT = "DCF-Analysis-Tool/1.0 (dcf-tool-contact@users.noreply.github.com)"
 DEFAULT_GROWTH_RATE = 0.05
 DEFAULT_COST_OF_DEBT = 0.05
 DEFAULT_TAX_RATE = 0.21
@@ -388,6 +389,9 @@ def main() -> int:
         return 1
     except urllib.error.URLError as err:
         print(f"Network error while analyzing ticker '{args.ticker}': {err}", file=sys.stderr)
+        return 1
+    except socket.timeout as err:
+        print(f"Timeout while analyzing ticker '{args.ticker}': {err}", file=sys.stderr)
         return 1
     except TimeoutError as err:
         print(f"Timeout while analyzing ticker '{args.ticker}': {err}", file=sys.stderr)
